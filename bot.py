@@ -1,9 +1,15 @@
 import json
-import feedparser
+import os
+import re
 
-from atproto import Client
+import feedparser
+from atproto import Client, client_utils
 
 RSS = "https://arquivolucyparsons.anarchistlibraries.net/feed"
+
+# -------------------------
+# Estado
+# -------------------------
 
 with open("state.json", "r", encoding="utf-8") as f:
     state = json.load(f)
@@ -18,31 +24,54 @@ if article_id == state["last_id"]:
     print("Nenhum artigo novo.")
     quit()
 
-title = entry.title
+# -------------------------
+# Dados do artigo
+# -------------------------
+
+title = entry.title.strip()
 link = entry.link
 
-text = f"""📚 New at the Lucy Parsons Archive
+summary = ""
 
-{title}
+if hasattr(entry, "summary"):
+    summary = re.sub("<.*?>", "", entry.summary)
+    summary = re.sub(r"\s+", " ", summary).strip()
 
-Read:
-{link}
-"""
+summary = summary[:180]
 
-import os
-
-identifier = os.environ["BLUESKY_IDENTIFIER"]
-password = os.environ["BLUESKY_PASSWORD"]
+# -------------------------
+# Bluesky
+# -------------------------
 
 client = Client()
 
-client.login(identifier, password)
+client.login(
+    os.environ["BLUESKY_IDENTIFIER"],
+    os.environ["BLUESKY_PASSWORD"]
+)
 
-client.send_post(text)
+tb = client_utils.TextBuilder()
+
+tb.text("📚 New at the Lucy Parsons Archive\n\n")
+
+tb.text(title + "\n\n")
+
+if summary:
+    tb.text(summary + "\n\n")
+
+tb.text("Read online:\n")
+
+tb.link(link, link)
+
+client.send_post(tb)
+
+# -------------------------
+# Atualiza estado
+# -------------------------
 
 state["last_id"] = article_id
 
 with open("state.json", "w", encoding="utf-8") as f:
     json.dump(state, f)
 
-print("Publicado com sucesso.")
+print("Publicado:", title)
