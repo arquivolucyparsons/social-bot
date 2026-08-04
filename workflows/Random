@@ -1,0 +1,45 @@
+name: Post aleatório do acervo
+
+on:
+  schedule:
+    # 14:00 UTC = 11:00 em Brasília. Ajuste se quiser outro horário.
+    - cron: "0 14 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bluesky-random
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Publicar
+        env:
+          BLUESKY_IDENTIFIER: ${{ secrets.BLUESKY_IDENTIFIER }}
+          BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+        run: python random_post.py
+
+      - name: Salvar histórico
+        if: always()
+        run: |
+          if [[ -n "$(git status --porcelain random_state.json)" ]]; then
+            git config user.name "github-actions"
+            git config user.email "github-actions@users.noreply.github.com"
+            git add random_state.json
+            git commit -m "update random state"
+            git pull --rebase
+            git push
+          fi
