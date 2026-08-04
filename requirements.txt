@@ -1,2 +1,2 @@
 feedparser
-atproto
+atproto>=0.0.61
