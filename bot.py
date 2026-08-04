@@ -189,14 +189,15 @@ def load_state() -> dict:
     return state
 
 
-def save_state(state: dict) -> None:
-    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+def save_state(state: dict, path: Path | None = None) -> None:
+    path = path or STATE_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
-        "w", encoding="utf-8", dir=STATE_PATH.parent or ".", delete=False
+        "w", encoding="utf-8", dir=path.parent or ".", delete=False
     ) as tmp:
         json.dump(state, tmp, ensure_ascii=False, indent=2)
         tmp_path = Path(tmp.name)
-    tmp_path.replace(STATE_PATH)
+    tmp_path.replace(path)
 
 
 # --------------------------------------------------
